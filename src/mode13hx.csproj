@@ -11,7 +11,7 @@
       <PackageReference Include="CommandLineParser" Version="2.9.1" />
       <PackageReference Include="OpenTK" Version="5.0.0-pre.12" />
       <PackageReference Include="OpenTK.Graphics" Version="5.0.0-pre.12" />
-      <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+      <PackageReference Include="tgalib-core" Version="0.1.1-alpha" />
     </ItemGroup>
 
     <ItemGroup>
@@ -28,6 +28,15 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
       <None Update="resources\texture\box_128.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="resources\texture\box_128.tga">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="resources\texture\oldschool_9x16.tga">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="resources\texture\oldschool_16x16.tga">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>

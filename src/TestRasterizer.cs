@@ -21,7 +21,7 @@ public class TestRasterizer(TestOptions opts) : IRasterizer
     private readonly Control mouseButtonLeft = opts.MouseControls[ControlEnum.MOUSE_BUTTON_LEFT];
     private readonly Control mouseDx = opts.MouseControls[ControlEnum.MOUSE_DELTA_X];
     private readonly Control mouseDy = opts.MouseControls[ControlEnum.MOUSE_DELTA_Y];
-    private readonly Texture boxTexture = new() { Name = "resources/texture/box_128.png" };
+    private readonly Texture boxTexture = new() { Name = "resources/texture/box_128.tga" };
     private readonly SlideBar<float> boxSpeedRatio = new(10, 70, 500, 40, Func.EncodePixelColor(0x0, 0xA0, 0x00), 0.0f, 5.0f, 1.0f);
 
     public void Render(FrameBuffer buffer, double time)

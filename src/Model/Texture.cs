@@ -1,7 +1,5 @@
 ﻿using mode13hx.Util;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using tgalib_core;
 
 namespace mode13hx.Model;
 
@@ -25,23 +23,23 @@ public class Texture
         if (Data == null)
         {
             using FileStream stream = File.OpenRead(Name);
-            using Image<Rgba32> bitmap = Image.Load<Rgba32>(stream); // Load the image using ImageSharp
+            using BinaryReader reader = new BinaryReader(stream);
+            TgaImage tgaImage = new(reader);
+            Image bitmap = tgaImage.GetImage();
+            Width = bitmap.Width;
+            Height = bitmap.Height;
 
             // Convert the bitmap to a uint array
-            uint[] data = new uint[bitmap.Width * bitmap.Height];
+            Data = new uint[bitmap.Width * bitmap.Height];
             int index = 0;
 
             for (int x = 0; x < bitmap.Width; x++) {
                 for (int y = 0; y < bitmap.Height; y++) // Store by y to form contiguous data (columns)
                 {
-                    Rgba32 color = bitmap[x, y];
-                    data[index++] = (uint)(color.R | color.G << 8 | color.B << 16);
+                    bitmap.GetPixelRgba(x, Height - y - 1, out int r, out int g, out int b, out int a); // Flipped y-axis from TGA to texture coordinates
+                    Data[index++] = Func.EncodePixelColorRgba(r, g, b, a);
                 }
             }
-
-            Data = data; // Set the texture data
-            Width = bitmap.Width;
-            Height = bitmap.Height;
         }
 
         // Load all variants of this texture
@@ -50,7 +48,9 @@ public class Texture
             if (variantNumber < Variant.Count) continue; // Only load if not already loaded
             string variantFileName = $"{Path.GetFileNameWithoutExtension(Name)}_{variantNumber:0000}{Path.GetExtension(Name)}";
             using FileStream streamV = File.OpenRead(variantFileName);
-            using Image<Rgba32> bitmapV = Image.Load<Rgba32>(streamV);
+            using BinaryReader reader = new BinaryReader(streamV);
+            TgaImage tgaImage = new TgaImage(reader);
+            Image bitmapV = tgaImage.GetImage();
 
             if (bitmapV.Width != Width || bitmapV.Height != Height) { throw new Exception($"Variant {variantNumber} has different size than original texture!"); }
 
@@ -60,8 +60,8 @@ public class Texture
             for (int x = 0; x < bitmapV.Width; x++) {
                 for (int y = 0; y < bitmapV.Height; y++) // Store by y to form contiguous data for columns
                 {
-                    Rgba32 color = bitmapV[x, y];
-                    variantData[variantIndex++] = Func.EncodePixelColor(color.R, color.G, color.B);
+                    bitmapV.GetPixelRgba(x, Height - y - 1, out int r, out int g, out int b, out int a); // Flipped y-axis from TGA to texture coordinates
+                    variantData[variantIndex++] = Func.EncodePixelColorRgba(r, g, b, a);
                 }
             }
 
@@ -152,37 +152,6 @@ public class Texture
             yield return variantNumber;
             variantNumber++;
         }
-    }
-
-    // save data to file, returns true if successful
-    public bool SaveVariant(int variantNumber = -1, bool overwrite = false)
-    {
-        if (variantNumber == -1) { variantNumber = Variant.Count; } // add new variant
-
-        string name = Path.GetFileNameWithoutExtension(Name);
-        string variantSuffixFormatted = variantNumber.ToString("0000");
-        string fileName = $"{name}_{variantSuffixFormatted}.png";
-        if (File.Exists(fileName) && !overwrite) { return false; }
-
-        // Create a new Image instance with the specified width and height
-        using Image<Rgba32> image = new(Width, Height);
-        
-        int index = 0;
-        for (int x = 0; x < Width; x++) {
-            for (int y = 0; y < Height; y++) // Populate the image with pixel data, indexed by y*Width + x
-            {
-                Func.DecodePixelColor(Data[index++], out int r, out int g, out int b);
-                image[x, y] = new Rgba32((byte)r, (byte)g, (byte)b, 255);
-            }
-        }
-
-        // Add copy of current texture to variant list
-        uint[] variantData = new uint[Data.Length];
-        Array.Copy(Data, variantData, Data.Length);
-        Variant.Add(variantData);
-        
-        image.Save(fileName, new PngEncoder());
-        return true;
     }
 
     // get pixel color by coordinates, this is slow and used only for single pixel access (e.g. color picker)

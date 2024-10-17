@@ -17,8 +17,8 @@ public sealed class Canvas(FrameDescriptor frame)
     private int clipYh = frame.Buffer.Height;
     
     // font texture
-    public static readonly Font Font16X16 = new("resources/texture/oldschool_16x16.png", 16, 16);
-    public static readonly Font Font9X16 = new("resources/texture/oldschool_9x16.png", 9, 16);
+    public static readonly Font Font16X16 = new("resources/texture/oldschool_16x16.tga", 16, 16);
+    public static readonly Font Font9X16 = new("resources/texture/oldschool_9x16.tga", 9, 16);
     
     public Canvas SetPenColor(int r, int g, int b) { penColor = Func.EncodePixelColor(r, g, b); return this; }
     public Canvas SetPenColor(uint color) { penColor = color; return this; }
@@ -232,7 +232,7 @@ public sealed class Canvas(FrameDescriptor frame)
                 for (int y = 0; y < font.CharacterHeight; y++)
                 {
                     uint pixel = font.Texture.Data[(sourceX + x) * font.Texture.Height + sourceY + y];
-                    if (pixel == 0xFFFFFF) // white pixels (255, 255, 255) are used for the character and black for the background
+                    if (pixel == 0xFFFFFFFF) // white pixels (255, 255, 255) are used for the character and black for the background
                     {
                         SetPixel(drawX + x, drawY + y); // Draw the pixel using the current pen color, respecting the frame bounds
                     }

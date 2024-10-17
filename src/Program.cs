@@ -11,7 +11,7 @@ public static class Program
 {
     public static int Main(string[] args)
     {
-        return Parser.Default.ParseArguments<TestOptions, BlankOptions>(args)
+        return Parser.Default.ParseArguments<TestOptions, BlankOptions>(args) // https://github.com/commandlineparser/commandline
             .MapResult(
                 (TestOptions opts) => RunWithOptions(opts, new TestRasterizer(opts)),
                 (BlankOptions opts) => RunWithOptions(opts, new BlankRasterizer(opts)),
