@@ -1,4 +1,5 @@
 ﻿using mode13hx.Configuration;
+using mode13hx.Model;
 using mode13hx.Presentation;
 using mode13hx.Util;
 
@@ -6,6 +7,8 @@ namespace mode13hx;
 
 public class BlankRasterizer(BlankOptions opts) : IRasterizer
 {
+    private readonly Texture texture = new() { Name = "resources/texture/test_8bitRLE.tga" };
+
     public void Render(FrameBuffer buffer, double secondsSinceLastFrame)
     {
         FrameDescriptor frame = buffer.StartNextFrame();
@@ -28,6 +31,8 @@ public class BlankRasterizer(BlankOptions opts) : IRasterizer
         {
             canvas.SetPenColor(Func.EncodePixelColor(20*i, 20*i, 20*i)).DrawString("Mode 13hx!", 120 + i, 120 + i, Canvas.Font9X16);
         }
+        
+        canvas.Draw(texture, 200, 200);
         
         canvas.SetPenColor(0xFFFFFF).DrawString("Press ESC to exit.", 20, frame.Buffer.Height - 20, Canvas.Font16X16);
         

@@ -22,10 +22,7 @@ public class Texture
     {
         if (Data == null)
         {
-            using FileStream stream = File.OpenRead(Name);
-            using BinaryReader reader = new BinaryReader(stream);
-            TgaImage tgaImage = new(reader);
-            Image bitmap = tgaImage.GetImage();
+            TgaImage bitmap = new(Name);
             Width = bitmap.Width;
             Height = bitmap.Height;
 
@@ -47,10 +44,7 @@ public class Texture
         {
             if (variantNumber < Variant.Count) continue; // Only load if not already loaded
             string variantFileName = $"{Path.GetFileNameWithoutExtension(Name)}_{variantNumber:0000}{Path.GetExtension(Name)}";
-            using FileStream streamV = File.OpenRead(variantFileName);
-            using BinaryReader reader = new BinaryReader(streamV);
-            TgaImage tgaImage = new TgaImage(reader);
-            Image bitmapV = tgaImage.GetImage();
+            TgaImage bitmapV = new TgaImage(variantFileName);
 
             if (bitmapV.Width != Width || bitmapV.Height != Height) { throw new Exception($"Variant {variantNumber} has different size than original texture!"); }
 
