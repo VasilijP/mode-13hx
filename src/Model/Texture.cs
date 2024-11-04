@@ -3,7 +3,7 @@ using tgalib_core;
 
 namespace mode13hx.Model;
 
-public class Texture
+public class Texture : IImage
 {
     // file name
     public string Name { get; set; }
@@ -16,7 +16,26 @@ public class Texture
     public readonly List<uint[]> Variant = [];
     public readonly Dictionary<string, uint[]> MipMap = new(); // width_height_variant -> data
     public int Width;
+    int IImage.Width => Width;
     public int Height;
+    int IImage.Height => Height;
+    
+    public static Texture CreateBlank(int width, int height, uint color)
+    {
+        Texture texture = new()
+        {
+            Name = "blank_"+Guid.NewGuid()+".tga",
+            Loaded = true, 
+            Data = new uint[width * height],
+            Width = width,
+            Height = height
+        };
+        
+        Span<uint> s = new(texture.Data, 0, width * height);
+        s.Fill(color);
+        
+        return texture;
+    }
     
     public void LoadData()
     {
@@ -44,7 +63,7 @@ public class Texture
         {
             if (variantNumber < Variant.Count) continue; // Only load if not already loaded
             string variantFileName = $"{Path.GetFileNameWithoutExtension(Name)}_{variantNumber:0000}{Path.GetExtension(Name)}";
-            TgaImage bitmapV = new TgaImage(variantFileName);
+            TgaImage bitmapV = new(variantFileName);
 
             if (bitmapV.Width != Width || bitmapV.Height != Height) { throw new Exception($"Variant {variantNumber} has different size than original texture!"); }
 
@@ -132,7 +151,7 @@ public class Texture
         Height = newHeight;
     }
     
-    // this will list all available variants of this texture by suffix number, e.g. texture.png -> texture_0001.png, texture_0002.png, etc.
+    // this will list all available variants of this texture by suffix number, e.g. texture.tga -> texture_0001.tga, texture_0002.tga, etc.
     public IEnumerable<int> GetVariants()
     {
         string fileName = Path.GetFileNameWithoutExtension(Name);
@@ -147,11 +166,73 @@ public class Texture
             variantNumber++;
         }
     }
+    
+    public void DecodeToVariants(int frameWidth, int frameHeight)
+    {
+        if (!Loaded) { LoadData(); } // Ensure the texture data is loaded
+        int totalFrames = Width; // Each frame forms a column in the large texture -> width is a count of frames
+        if (Height != frameWidth * frameHeight) // Each frame is unrolled into a column -> height is a frameWidth * frameHeight
+        {
+            throw new InvalidOperationException("Texture dimensions do not match expected dimensions for decoding.");
+        }
+
+        for (int frameIndex = 0; frameIndex < totalFrames; frameIndex++)
+        {
+            // Create a new variant for this frame
+            uint[] frameData = new uint[frameWidth * frameHeight];
+
+            // Extract the frame data from the large texture
+            for (int x = 0; x < frameWidth; x++)
+            {
+                int sourceIndex = frameIndex * Height + x * frameHeight;
+                for (int y = 0; y < frameHeight; y++, sourceIndex++)
+                {
+                    frameData[x * frameHeight + y] = Data[sourceIndex];
+                }
+            }
+
+            // Add the frame data as a new variant
+            Variant.Add(frameData);
+        }
+        
+        this.Width = frameWidth;
+        this.Height = frameHeight;
+        this.Data = new uint[Width * Height];
+        Array.Copy(Variant[0], this.Data, Variant[0].Length);
+    }
+    
+    // save data to file, returns true if successful
+    public bool SaveVariant(int variantNumber = -1, bool overwrite = false)
+    {
+        if (variantNumber == -1) { variantNumber = Variant.Count; } // add new variant
+
+        string name = Path.GetFileNameWithoutExtension(Name);
+        string variantSuffixFormatted = variantNumber.ToString("0000");
+        string fileName = $"{name}_{variantSuffixFormatted}.tga";
+        if (File.Exists(fileName) && !overwrite) { return false; }
+        
+        using FileStream stream = new FileStream(fileName, FileMode.Create);
+        TgaFileFormat.CommonSave(TgaMode.Rgb24Rle, stream, this);
+
+        // Add copy of current texture to variant list
+        uint[] variantData = new uint[Data.Length];
+        Array.Copy(Data, variantData, Data.Length);
+        Variant.Add(variantData);
+        return true;
+    }
 
     // get pixel color by coordinates, this is slow and used only for single pixel access (e.g. color picker)
     public uint GetPixel(int x, int y)
     {
         if (x < 0 || y < 0 || x >= Width || y >= Height) { return 0; } 
         return Data[x * Height + y];
+    }
+    
+    // For the purpose of saving in TGA format, Y coordinate is flipped
+    void IImage.GetPixelRgba(int x, int y, out int r, out int g, out int b, out int a)
+    {
+        a = 0xFF; // Assume full opacity
+        uint color = Data[x * Height + (Height - y - 1)];
+        Func.DecodePixelColor(color, out r, out g, out b);
     }
 }

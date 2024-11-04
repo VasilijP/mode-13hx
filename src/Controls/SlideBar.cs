@@ -5,7 +5,7 @@ namespace mode13hx.Controls;
 
 public class SlideBar<T> : UiControlBase where T : INumber<T>
 {
-    public T Value { get; private set; }
+    public ControlParam<T> Param { get; private set; }
     private double position;
     private readonly int defaultMarkerX;
     private const int Margin = 5;
@@ -15,16 +15,17 @@ public class SlideBar<T> : UiControlBase where T : INumber<T>
     
     public Action<T> OnActivate { get; set; }
     
-    public SlideBar(int x, int y, int width, int height, uint color, T min, T max, T value) : base(x, y)
+    public SlideBar(int x, int y, int width, int height, uint color, T min, T max, ControlParam<T> param) : base(x, y)
     {
         this.Width = width;
         this.Height = height;
         this.barColor = color;
         this.min = min;
         this.max = max;
-        this.Value = value;
-        position = Convert.ToDouble((value - min)) / Convert.ToDouble((max - min));
-        defaultMarkerX = X + Margin + (int)(Convert.ToDouble(value - min) * (Width - 2 * Margin) / Convert.ToDouble(max - min));
+        this.Param = param;
+        position = Convert.ToDouble((param.Value - min)) / Convert.ToDouble((max - min));
+        defaultMarkerX = X + Margin + (int)(Convert.ToDouble(param.Value - min) * (Width - 2 * Margin) / Convert.ToDouble(max - min));
+        ToolTip = $"{Param.Name}: {Format2SignificantDigits(param.Value)}";
     }
 
     public override void Draw(Canvas canvas, bool active = false)
@@ -40,8 +41,27 @@ public class SlideBar<T> : UiControlBase where T : INumber<T>
     public override bool Click(int mx, int my)
     {
         if (!ActiveArea(mx, my)) return false;
-        position = (mx-X)*1.0/Width;
-        Value = T.CreateChecked(min) + T.CreateChecked(T.CreateChecked(max - min) * T.CreateChecked(position));
-        OnActivate?.Invoke(Value); return true;
+        position = Math.Clamp((mx-X)*1.0/Width, 0, 1.0);
+        double minValue = double.CreateChecked(min);
+        double maxValue = double.CreateChecked(max);
+        double interpolatedValue = minValue + (maxValue - minValue) * position;
+        Param.Value = T.CreateChecked(interpolatedValue);
+        OnActivate?.Invoke(Param.Value); return true;
+    }
+    
+    public static string Format2SignificantDigits(T value)
+    {
+        int digits = 0;
+        double v = double.CreateChecked(value);
+        if (10.0.CompareTo(v) < 0) { digits = 0; }
+        else if (1.0.CompareTo(v) < 0) { digits = 1; }
+        else if (0.1.CompareTo(v) < 0) { digits = 2; }
+        else if (0.01.CompareTo(v) < 0) { digits = 3; }
+        else if (0.001.CompareTo(v) < 0) { digits = 4; }
+        else if (0.0001.CompareTo(v) < 0) { digits = 5; }
+        else if (0.00001.CompareTo(v) < 0) { digits = 6; }
+        
+        string format = $"{{0:F{digits}}}";
+        return string.Format(format, v);
     }
 }

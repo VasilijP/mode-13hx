@@ -117,17 +117,46 @@ public static class Func
         return EncodePixelColor(r, g, b);
     }
     
-    public static uint MixColorsInverted(uint color1, double weight1, uint color2, double weight2)
+    public static uint MixColorsAdd(uint color1, float w1, uint color2, float w2)
+    {
+        DecodePixelColor(color1, out int r1, out int g1, out int b1);
+        DecodePixelColor(color2, out int r2, out int g2, out int b2);
+        float w = w2 / (w1 + w2);
+        r1 += (int)(w*r2); g1 += (int)(w*g2); b1 += (int)(w*b2);
+        int max = Math.Max(Math.Max(r1, g1), b1);
+        float wc = Math.Min(255.0f, max) / max;
+        int r = (int)Math.Clamp(r1*wc, 0, 255);
+        int g = (int)Math.Clamp(g1*wc, 0, 255);
+        int b = (int)Math.Clamp(b1*wc, 0, 255);
+    
+        return EncodePixelColor(r, g, b);
+    }
+
+    public static uint MixColors(uint color1, float weight1, uint color2, float weight2)
     {
         DecodePixelColor(color1, out int r1, out int g1, out int b1);
         DecodePixelColor(color2, out int r2, out int g2, out int b2);
         r1 = 255 - r1; g1 = 255 - g1; b1 = 255 - b1;
         r2 = 255 - r2; g2 = 255 - g2; b2 = 255 - b2;
-        double sumW = weight1 + weight2;
-        weight1 /= sumW; weight2 /= sumW; // normalize weights to have sum = 1.0
-        int r = (int)(r1*weight1 + r2*weight2);
-        int g = (int)(g1*weight1 + g2*weight2);
-        int b = (int)(b1*weight1 + b2*weight2);
+        float sumW = weight1 + weight2;
+        weight1 /= sumW;  weight2 /= sumW; // normalize weights to have sum = 1.0
+        int r = Math.Clamp((int)(r1*weight1 + r2*weight2), 0, 255);
+        int g = Math.Clamp((int)(g1*weight1 + g2*weight2), 0, 255);
+        int b = Math.Clamp((int)(b1*weight1 + b2*weight2), 0, 255);
+        return EncodePixelColor(255-r, 255-g, 255-b);
+    }
+
+    public static uint MixColorsInverted(uint color1, float weight1, uint color2, float weight2)
+    {
+        DecodePixelColor(color1, out int r1, out int g1, out int b1);
+        DecodePixelColor(color2, out int r2, out int g2, out int b2);
+        r1 = 255 - r1; g1 = 255 - g1; b1 = 255 - b1;
+        r2 = 255 - r2; g2 = 255 - g2; b2 = 255 - b2;
+        float sumW = weight1 + weight2;
+        weight2 /= sumW; // normalize weights to have sum = 1.0
+        int r = Math.Clamp((int)(r1 + Math.Abs(r1-r2)*weight2), 0, Math.Max(r1, r2));
+        int g = Math.Clamp((int)(g1 + Math.Abs(g1-g2)*weight2), 0, Math.Max(g1, g2));
+        int b = Math.Clamp((int)(b1 + Math.Abs(b1-b2)*weight2), 0, Math.Max(b1, b2));
         return EncodePixelColor(255-r, 255-g, 255-b);
     }
 }

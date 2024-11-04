@@ -26,7 +26,7 @@ public class BlankRasterizer(BlankOptions opts) : IRasterizer
         frame.Buffer.Data[frame.Offset + x * frame.Buffer.Height + y + 300] = Func.EncodePixelColorRgba(0, 0, 0xFF, 0);
         
         // or use canvas:
-        Canvas canvas = new(frame);
+        Canvas canvas = frame.Canvas;
         for (int i = 0; i < 10; i++)
         {
             canvas.SetPenColor(Func.EncodePixelColor(20*i, 20*i, 20*i)).DrawString("Mode 13hx!", 120 + i, 120 + i, Canvas.Font9X16);

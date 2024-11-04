@@ -9,6 +9,7 @@ namespace mode13hx;
 
 public class TestRasterizer(TestOptions opts) : IRasterizer
 {
+    private readonly FrameChart frameChart = new(8, 0, 120, Func.EncodePixelColor(0,0xFF,0), FrameBuffer.Fps);
     private Vector2 position = new(100, 100);         // Initial position of the bounding box
     private static Vector2 movement = new(500, 300);  // Movement vector (speed in pixels per second)
     private float movementRatio = 1.0f;
@@ -22,7 +23,9 @@ public class TestRasterizer(TestOptions opts) : IRasterizer
     private readonly Control mouseDx = opts.MouseControls[ControlEnum.MOUSE_DELTA_X];
     private readonly Control mouseDy = opts.MouseControls[ControlEnum.MOUSE_DELTA_Y];
     private readonly Texture boxTexture = new() { Name = "resources/texture/box_128.tga" };
-    private readonly SlideBar<float> boxSpeedRatio = new(10, 70, 500, 40, Func.EncodePixelColor(0x0, 0xA0, 0x00), 0.0f, 5.0f, 1.0f);
+    private static readonly ControlParam<float> BoxSpeedParam = ControlParamRegistry.Get<float>("Speed multiplier", 1.0f);
+    private readonly ControlParam<bool> drawFrameChart = ControlParamRegistry.Get("DrawFrameChart", opts.Dofps); // draw frametime chart
+    private readonly SlideBar<float> boxSpeedRatio = new(10, 220, 400, 40, Func.EncodePixelColor(0x0, 0xA0, 0x00), 0.0f, 5.0f, BoxSpeedParam);
 
     public void Render(FrameBuffer buffer, double time)
     {
@@ -50,8 +53,8 @@ public class TestRasterizer(TestOptions opts) : IRasterizer
         if (mouseButtonLeft.Active)
         {
             boxSpeedRatio.Click(mx, my);
-            movementRatio = boxSpeedRatio.Value;
-            boxSpeedRatio.ToolTip = $"Speed multiplier is {boxSpeedRatio.Value:F2}";
+            movementRatio = BoxSpeedParam.Value;
+            boxSpeedRatio.ToolTip = $"Speed multiplier: {BoxSpeedParam.Value:F2}";
         }
         
         // Clear the frame with solid color
@@ -59,7 +62,7 @@ public class TestRasterizer(TestOptions opts) : IRasterizer
         frameData.Fill(Func.EncodePixelColor(190, 190, 190));
         
         // Create a canvas and draw all UI elements
-        Canvas canvas = new(frame);
+        Canvas canvas = frame.Canvas;
         canvas.Draw(boxTexture, (int)position.X, (int)position.Y); //canvas.SetPenColor(0xFF, 0xFF, 0xFF).Rectangle(position.X, position.Y, BoxSize, BoxSize);
         
         // Speed slider
@@ -69,6 +72,8 @@ public class TestRasterizer(TestOptions opts) : IRasterizer
         mx = Math.Clamp(mx + Interlocked.Exchange(ref mouseDx.Delta, 0), 0, opts.Width-1);
         my = Math.Clamp(my + Interlocked.Exchange(ref mouseDy.Delta, 0), 0, opts.Height-1);
         canvas.SetPenColor(0x10, 0x10, 0).MoveTo(mx, my).Draw(0, 20, true).Draw(10, 0, true).Draw(-10, -20, true);
+        
+        if (drawFrameChart.Value) { frameChart.Draw(canvas); }
 
         buffer.FinishFrame(frame);
     }

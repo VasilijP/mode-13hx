@@ -79,7 +79,7 @@ public sealed class Canvas(FrameDescriptor frame)
     }
     
     // Method to draw a texture onto the canvas at position (posX, posY)
-    public void Draw(Texture texture, int posX, int posY, int variant = -1)
+    public Canvas Draw(Texture texture, int posX, int posY, int variant = -1)
     {
         if (!texture.Loaded) { texture.LoadData(); }
         
@@ -98,6 +98,8 @@ public sealed class Canvas(FrameDescriptor frame)
             int textureColumnIndex = (textureStartX + x - startX) * texture.Height + textureStartY;
             Buffer.BlockCopy(textureData, textureColumnIndex * sizeof(uint), frame.Buffer.Data, frameColumnIndex * sizeof(uint), Math.Max(0, (endY - startY)) * sizeof(uint));
         }
+        
+        return this;
     }
     
     public void DrawScaled(Texture texture, int posX, int posY, int newWidth, int newHeight, int variant = -1)
@@ -172,33 +174,45 @@ public sealed class Canvas(FrameDescriptor frame)
         }
     }
     
+    // support for filling of a convex polygon (triangle, quad, etc.) by columns
+    private readonly int[] minY = new int[frame.Buffer.Width];
+    private readonly int[] maxY = new int[frame.Buffer.Width];
+    
+    private void ProcessEdge(int x0, int y0, int x1, int y1, int minX, int maxX)
+    {
+        if (x0 == x1) { return; } // vertical edge should not be needed
+        if (x0 > x1) { (x0, x1) = (x1, x0); (y0, y1) = (y1, y0); } // ensure x0 < x1
+        float slope = (float)(y1 - y0) / (x1 - x0);
+
+        for (int x = Math.Max(x0, minX); x <= Math.Min(x1, maxX); x++)
+        {
+            float y = y0 + slope * (x - x0);
+            int yInt = (int)Math.Round(y);
+
+            minY[x] = Math.Min(minY[x], yInt);
+            maxY[x] = Math.Max(maxY[x], yInt);
+        }
+    }
+    
     public Canvas FillTriangle(int x1, int y1, int x2, int y2, int x3, int y3)
     {
-        // y1 ≤ y2 ≤ y3
-        if (y2 < y1) { Func.Swap(ref x1, ref x2); Func.Swap(ref y1, ref y2); }
-        if (y3 < y1) { Func.Swap(ref x1, ref x3); Func.Swap(ref y1, ref y3); }
-        if (y3 < y2) { Func.Swap(ref x2, ref x3); Func.Swap(ref y2, ref y3); }
+        int canvasHeight = frame.Buffer.Height;
+        int minX = Math.Max(clipX, Math.Min(x1, Math.Min(x2, x3)));
+        int maxX = Math.Min(clipXw-1, Math.Max(x1, Math.Max(x2, x3)));
+        for (int i = minX; i <= maxX; i++) { minY[i] = canvasHeight; maxY[i] = 0; } // Initialize minY and maxY arrays for the triangle's X-range
         
-        float dx1 = (y2 - y1) > 0 ? (float)(x2 - x1) / (y2 - y1) : 0;
-        float dx2 = (y3 - y1) > 0 ? (float)(x3 - x1) / (y3 - y1) : 0;
-        float dx3 = (y3 - y2) > 0 ? (float)(x3 - x2) / (y3 - y2) : 0;
-
-        float sx = x1; float ex = x1;
+        ProcessEdge(x1, y1, x2, y2, minX, maxX);
+        ProcessEdge(x2, y2, x3, y3, minX, maxX);
+        ProcessEdge(x3, y3, x1, y1, minX, maxX);
         
-        for (int y = y1; y <= y2; y++) // upper part of the triangle (from y1 to y2)
+        for (int x = minX; x <= maxX; x++) // Fill the columns between minY and maxY
         {
-            MoveTo((int)sx, y).LineTo((int)ex, y);
-            sx += dx1;
-            ex += dx2;
-        }
+            int yStart = Math.Max(clipY, minY[x]);
+            int yEnd = Math.Min(clipYh-1, maxY[x]);
+            if (yStart > yEnd) continue;
 
-        sx = x2;
-        
-        for (int y = y2; y <= y3; y++) // lower part of the triangle (from y2 to y3)
-        {
-            MoveTo((int)sx, y).LineTo((int)ex, y);
-            sx += dx3;
-            ex += dx2;
+            int indexStart = frame.Offset + x * frame.Buffer.Height + yStart;
+            Array.Fill(frame.Buffer.Data, penColor, indexStart, yEnd - yStart + 1);
         }
 
         return this;
@@ -209,11 +223,14 @@ public sealed class Canvas(FrameDescriptor frame)
     {
         font ??= Font9X16;
         int charactersPerRow = font.Texture.Width / font.CharacterWidth;
+        int drawX = startX;
+        int drawY = startY;
 
         // Loop through each character in the input string
         for (int i = 0; i < text.Length; i++)
         {
             byte charIndex = (byte)text[i]; // Get the ASCII value of the character (0-255)
+            if (charIndex == 13 || charIndex == 10) { drawX = startX; drawY += font.CharacterHeight; continue; }
 
             // Calculate the row and column in the font texture
             int charRow = charIndex / charactersPerRow;
@@ -222,10 +239,6 @@ public sealed class Canvas(FrameDescriptor frame)
             // Calculate the starting coordinates in the font texture
             int sourceX = charColumn * font.CharacterWidth;
             int sourceY = charRow * font.CharacterHeight;
-
-            // Calculate the starting position to draw this character on the canvas
-            int drawX = startX + i * font.CharacterWidth;
-            int drawY = startY;
 
             // Loop through the character's pixels
             for (int x = 0; x < font.CharacterWidth; x++)
@@ -237,6 +250,8 @@ public sealed class Canvas(FrameDescriptor frame)
                         SetPixel(drawX + x, drawY + y); // Draw the pixel using the current pen color, respecting the frame bounds
                     }
                 }
+                
+            drawX += font.CharacterWidth; // Move to the next character position
         }
     }
 }

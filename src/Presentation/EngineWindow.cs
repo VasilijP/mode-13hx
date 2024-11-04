@@ -41,6 +41,7 @@ public class EngineWindow : GameWindow
     private long frameCount = 0;
     private readonly Timer timer = new(1000);
     private readonly CommonOptions config;
+    private ScreenRecorder screenRecorder;
 
     public EngineWindow(CommonOptions config, IRasterizer rasterizer, GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings) : base(gameWindowSettings, nativeWindowSettings)
     {
@@ -108,7 +109,7 @@ public class EngineWindow : GameWindow
         
         GL.Clear(ClearBufferMask.ColorBufferBit);
         GL.BindVertexArray(vertexArrayObject); // Bind the VAO
-        frameBuffer.Use(); // TODO: maintain minimum update rate even if render thread is lagging (do not flip/draw, but update input, world, etc.)
+        frameBuffer.Use(screenRecorder); // TODO: maintain minimum update rate even if render thread is lagging (do not flip/draw, but update input, world, etc.)
         shader.Use(); // Bind the shader
         GL.DrawElements(PrimitiveType.Triangles, indices.Length, DrawElementsType.UnsignedInt, 0); //GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
         SwapBuffers(); // swap the buffers to display the rendered image
@@ -125,6 +126,10 @@ public class EngineWindow : GameWindow
         Interlocked.Add(ref config.MouseControls[ControlEnum.MOUSE_DELTA_WHEEL].Delta, (int)MouseState.ScrollDelta.Y);
         config.MouseControls[ControlEnum.MOUSE_BUTTON_LEFT].Active |= MouseState.IsButtonDown(MouseButton.Left);
         config.MouseControls[ControlEnum.MOUSE_BUTTON_RIGHT].Active |= MouseState.IsButtonDown(MouseButton.Right);
+        
+        // Screen Recording Hotkey
+        if (screenRecorder != null && screenRecorder.IsFinished()) { screenRecorder.CapTexture.SaveVariant(); screenRecorder = null; }
+        if (KeyboardState.IsKeyDown(Keys.R) && screenRecorder == null) { screenRecorder = new ScreenRecorder(config.Rx, config.Ry, config.Rw, config.Rh, config.Rfps, config.Rframes); }
     }
     
     protected override void OnResize(ResizeEventArgs e)
