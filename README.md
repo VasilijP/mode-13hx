@@ -1,5 +1,15 @@
 # mode-13hx
-Feeling nostalgic for Mode 13h? Try out Mode 13HX - a modern alternative inspired by the classic graphics mode, built with [OpenTK](https://opentk.net/index.html) and targeting .NET 8.
+
+~~~sh
+// run test (bouncing box) with triple buffer (-l 2), fullscreen (-f), framechart (-d) in 4k
+// it will downscale(or upscale) to any display resolution
+dotnet mode13hx.dll test -f -d -l 2 -w 3840 -h 2160
+
+// run blank rasterizer in a fullscreen (-f), V-Sync (-v) in a default (1920x1080) resolution with double buffer
+dotnet mode13hx.dll blank -f -v
+~~~
+
+Feeling nostalgic for Mode 13h? Try out Mode 13HX - a modern alternative inspired by the classic graphics mode, built with [OpenTK](https://opentk.net/index.html) and targeting **.NET 8**.
 
 This lightweight framework provides direct pixel access and simple APIs for 2D/3D graphics, supporting both **Windows** and **Linux**. Whether you're creating retro-style games or experimenting with low-level graphics, Mode 13HX offers the ease of use of the past with the power of today.
 
