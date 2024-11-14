@@ -1,5 +1,7 @@
 # mode-13hx
 
+- [Old-School Graphics in C# / .Net 8, Part 1: Teaching an Old Dog New Tricks (Introducing Mode 13hx)](https://dev.to/peter_truchly_4fce0874fd5/old-school-graphics-in-c-net-8-part-1-teaching-an-old-dog-new-tricks-introducing-mode-13hx-mpk)
+
 ~~~sh
 // run test (bouncing box) with triple buffer (-l 2), fullscreen (-f), framechart (-d) in 4k
 // it will downscale(or upscale) to any display resolution
